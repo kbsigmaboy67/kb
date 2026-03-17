@@ -1,1 +1,88 @@
-im jorking it
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <title>GitHub Sync: Unicode Fixed</title>
+    <style>
+        body { font-family: system-ui, sans-serif; display: flex; justify-content: center; padding: 50px; background: #f6f8fa; }
+        .card { background: white; border: 1px solid #d0d7de; padding: 24px; border-radius: 6px; width: 100%; max-width: 450px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
+        input { width: 100%; padding: 10px; margin: 12px 0; border: 1px solid #d0d7de; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #2da44e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        button:hover { background: #2c974b; }
+        #status { margin-top: 15px; font-size: 14px; white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h3>Sync kbsigmaboy67/kb/main.html</h3>
+    <p style="font-size: 13px; color: #57606a;">This version supports emojis and special characters. ✨</p>
+    
+    <input type="password" id="token" placeholder="Paste GitHub Token (ghp_...)">
+    <button id="syncBtn">Sync Now</button>
+    
+    <div id="status" style="color: black;">🚀 Encoding &amp; Uploading...</div>
+</div>
+
+<script type="module">
+    import { Octokit } from "https://esm.sh/octokit";
+
+    // Helper: Safely encode UTF-8 strings to Base64
+    function toBase64(str) {
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+            return String.fromCharCode('0x' + p1);
+        }));
+    }
+
+    const btn = document.getElementById('syncBtn');
+    const status = document.getElementById('status');
+
+    btn.addEventListener('click', async () => {
+        const auth = document.getElementById('token').value;
+        if (!auth) return alert("Please enter your token.");
+
+        const octokit = new Octokit({ auth });
+        const owner = 'kbsigmaboy67';
+        const repo = 'kb';
+        const path = 'main.html';
+
+        try {
+            status.innerText = "🔍 Fetching existing file SHA...";
+            status.style.color = "black";
+            
+            let sha;
+            try {
+                const { data } = await octokit.rest.repos.getContent({ owner, repo, path });
+                sha = data.sha;
+            } catch (e) {
+                console.log("File not found, creating new one.");
+            }
+
+            status.innerText = "🚀 Encoding & Uploading...";
+
+            // Get the HTML of the current page
+            const htmlContent = document.documentElement.outerHTML; 
+            
+            // Use our NEW safe encoding function
+            const contentEncoded = toBase64(htmlContent);
+
+            await octokit.rest.repos.createOrUpdateFileContents({
+                owner,
+                repo,
+                path,
+                message: "Sync: Updated via Browser (Unicode Safe)",
+                content: contentEncoded,
+                sha: sha 
+            });
+
+            status.innerHTML = "✅ <b>Success!</b> kb/main.html has been updated.";
+            status.style.color = "#1a7f37";
+
+        } catch (err) {
+            console.error(err);
+            status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
+            status.style.color = "#cf222e";
+        }
+    });
+</script>
+
+
+</body></html>
